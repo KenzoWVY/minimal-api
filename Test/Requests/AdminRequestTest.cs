@@ -1,26 +1,53 @@
-using MinimalApi.Domain.Entities;
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using MinimalApi.Domain.ModelViews;
+using MinimalApi.DTOs;
+using Test.Helpers;
 
 namespace Test.Requests;
 
 [TestClass]
 public sealed class AdminRequestTest
 {
+    [ClassInitialize]
+    public static void ClassInit(TestContext testContext)
+    {
+        Setup.ClassInit(testContext);
+    }
+
+    [ClassCleanup]
+    public static void ClassCleanup()
+    {
+        Setup.ClassCleanup();
+    }
+
     [TestMethod]
-    public void TestGetSetProperties()
+    public async Task TestGetSetProperties()
     {
         // Arrange
-        var adm = new Admin();
+        var loginDTO = new LoginDTO
+        {
+            Email = "admin@test.com",
+            Password = "123456"
+        };
+
+        var content = new StringContent(JsonSerializer.Serialize(loginDTO), Encoding.UTF8, "Application/json");
 
         // Act
-        adm.Id = 1;
-        adm.Email = "test@test.com";
-        adm.Password = "test";
-        adm.Profile = "Adm";
+        var response = await Setup.client.PostAsync("/admins/login", content);
 
         // Assert
-        Assert.AreEqual(1, adm.Id);
-        Assert.AreEqual("test@test.com", adm.Email);
-        Assert.AreEqual("test", adm.Password);
-        Assert.AreEqual("Adm", adm.Profile);
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadAsStringAsync();
+        var admLogged = JsonSerializer.Deserialize<AdmLoggedIn>(result, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        Assert.IsNotNull(admLogged?.Email);
+        Assert.IsNotNull(admLogged?.Profile);
+        Assert.IsNotNull(admLogged?.Token);
     }
 }
