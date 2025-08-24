@@ -6,6 +6,12 @@ using MinimalApi.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 using MinimalApi.Domain.ModelViews;
 using MinimalApi.Domain.Entities;
+using MinimalApi.Domain.Enums;
+using System.ComponentModel;
+using System.Runtime.InteropServices.Marshalling;
+
+Console.WriteLine(typeof(IAdminService).FullName);
+Console.WriteLine(typeof(IAdminService).Assembly.FullName);
 
 #region Builder
 
@@ -43,6 +49,68 @@ app.MapPost("/admins/login", ([FromBody] LoginDTO loginDTO, IAdminService adminS
         return Results.Ok("Sucessful login");
     else
         return Results.Unauthorized();
+}).WithTags("Admins");
+
+app.MapPost("/admins", ([FromBody] AdminDTO adminDTO, IAdminService adminService) =>
+{
+    var validation = new ValidationError
+    {
+        Messages = new List<string>()
+    };
+
+    if (string.IsNullOrEmpty(adminDTO.Email))
+        validation.Messages.Add("Email cannot be empty");
+    if (string.IsNullOrEmpty(adminDTO.Password))
+        validation.Messages.Add("Password cannot be empty");
+    if (adminDTO.Profle == null)
+        validation.Messages.Add("Profile cannot be empty");
+    if (validation.Messages.Count() > 0)
+        return Results.BadRequest(validation);
+
+    var admin = new Admin
+    {
+        Email = adminDTO.Email,
+        Password = adminDTO.Password,
+        Profile = adminDTO.Profle?.ToString() ?? Profile.Editor.ToString()
+    };
+    adminService.Include(admin);
+
+    return Results.Created($"/admin/{admin.Id}", new AdminModelView
+        {
+            Id = admin.Id,
+            Email = admin.Email,
+            Profile = admin.Profile
+        });
+}).WithTags("Admins");
+
+app.MapGet("/admins", ([FromQuery] int? page, IAdminService adminService) =>
+{
+    var adms = new List<AdminModelView>();
+    var admins = adminService.All(page);
+
+    foreach (var adm in admins)
+    {
+        adms.Add(new AdminModelView
+        {
+            Id = adm.Id,
+            Email = adm.Email,
+            Profile = adm.Profile
+        });
+    }
+    return Results.Ok(adms);
+}).WithTags("Admins");
+
+app.MapGet("/admins/{id}", ([FromRoute] int id, IAdminService adminService) =>
+{
+    var admin = adminService.SearchId(id);
+    if (admin == null) return Results.NotFound();
+
+    return Results.Ok(new AdminModelView
+    {
+        Id = admin.Id,
+        Email = admin.Email,
+        Profile = admin.Profile
+    });
 }).WithTags("Admins");
 
 #endregion
@@ -85,9 +153,7 @@ app.MapPost("/vehicles", ([FromBody] VehicleDTO vehicleDTO, IVehicleService vehi
 
 app.MapGet("/vehicles", ([FromQuery] int? page, IVehicleService vehicleService) =>
 {
-    var vehicles = vehicleService.All(page);
-
-    return Results.Ok(vehicles);
+    return Results.Ok(vehicleService.All(page));
 }).WithTags("Vehicles");
 
 app.MapGet("/vehicles/{id}", ([FromRoute] int id, IVehicleService vehicleService) =>

@@ -31,26 +31,26 @@ public class VehicleService : IVehicleService
         return query.ToList();
     }
 
+    public Vehicle? SearchId(int id)
+    {
+        return _context.Vehicles.Where(v => v.Id == id).FirstOrDefault();
+    }
+
     public void Include(Vehicle vehicle)
     {
         _context.Vehicles.Add(vehicle);
         _context.SaveChanges();
     }
 
-    public void Remove(Vehicle vehicle)
+        public void Update(Vehicle vehicle)
     {
-        _context.Vehicles.Remove(vehicle);
+        _context.Vehicles.Update(vehicle);
         _context.SaveChanges();
     }
 
-    public Vehicle? SearchId(int id)
+    public void Remove(Vehicle vehicle)
     {
-        return _context.Vehicles.Where(v => v.Id == id).FirstOrDefault();
-    }
-
-    public void Update(Vehicle vehicle)
-    {
-        _context.Vehicles.Update(vehicle);
+        _context.Vehicles.Remove(vehicle);
         _context.SaveChanges();
     }
 }
